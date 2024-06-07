@@ -33,7 +33,7 @@ pub struct Piece {
 
 impl Piece {
     pub fn new(ceils: Vec<Vec<char>>) -> Self {
-        let ceils = Self::remove_empty_rows_and_columns(ceils);
+        // let ceils = Self::remove_empty_rows_and_columns(ceils);
         Self {
             width: ceils[0].len() as u8,
             height: ceils.len() as u8,
