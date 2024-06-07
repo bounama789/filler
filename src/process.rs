@@ -81,7 +81,6 @@ impl State {
         let mut players: Vec<Robot> = Vec::new();
         let mut pieces_ceils = Vec::new();
         let mut parsing_pieces = false;
-        let mut startidx = 0;
 
         let mut parsing_anfield = false;
         let mut anfield_strtidx: usize = 0;
@@ -91,12 +90,12 @@ impl State {
                     robot = Robot::new(1, ['a', '@'])
                 } else {
                     pidx = 2;
-                    robot = Robot::new(1, ['s', '$'])
+                    robot = Robot::new(2, ['s', '$'])
                 }
                 players.push(robot)
             } else if line.starts_with("$$$") {
                 if line.contains("p1") {
-                    other_robot = Robot::new(2, ['a', '@'])
+                    other_robot = Robot::new(1, ['a', '@'])
                 } else {
                     other_robot = Robot::new(2, ['s', '$'])
                 }
@@ -112,13 +111,15 @@ impl State {
             } else if line.trim().chars().all(char::is_numeric) {
                 parsing_anfield = true;
                 anfield_strtidx = idx + 1;
+                continue;
             } else if line.starts_with("Piece") {
                 parsing_anfield = false;
                 parsing_pieces = true;
-                startidx = idx + 1;
+                continue;
             } else if line.starts_with("->") {
                 parsing_anfield = false;
                 parsing_pieces = false;
+                continue;
             }
             if parsing_anfield {
                 let l = line.trim_matches(|c: char| !c.is_ascii_punctuation());
@@ -137,15 +138,23 @@ impl State {
             }
 
             if parsing_pieces {
-                let l = line.trim_matches(|c: char| !c.is_ascii_punctuation());
+                let l = line.trim();
                 let ceils: Vec<char> = l.chars().collect();
                 pieces_ceils.push(ceils)
             }
         }
         self.anfield = anfield;
+
+        println!("{:?}",self.anfield);
         self.robot = players.iter().find(|p| p.id == pidx).unwrap().clone();
+        println!("{:?}",self.robot);
+
         self.other_robot = players.iter().find(|p| p.id != pidx).unwrap().clone();
+        println!("{:?}",self.other_robot);
+
         self.current_piece = Piece::new(pieces_ceils);
+        println!("{:?}",self.current_piece);
+
         self.started = true;
     }
 }

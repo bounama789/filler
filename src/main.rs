@@ -7,19 +7,27 @@ fn main() {
     let stdin = io::stdin();
     let mut started = false;
     let mut state = State::new();
-    for line in stdin.lock().lines() {
-        if let Ok(l) = line {
-            if l == "" {
-                if !started {
-                    state.parse(input_lines.clone());
-                    started=true;
+    loop {
+        'read_buffer: for line in stdin.lock().lines() {
+            if let Ok(l) = line {
+                if l.trim() == "" {
+                    break 'read_buffer;
                 } else {
-                    println!("{} {}",state.robot.starting_point.0,state.robot.starting_point.1);
+                    input_lines.push(l);
                 }
-                input_lines.clear();
-            }else{
-                input_lines.push(l);
             }
+        }
+
+
+        if !started {
+            state.parse(input_lines.clone());
+            input_lines.clear();
+            started = true;
+        } else {
+            println!(
+                "{} {}",
+                state.robot.starting_point.0, state.robot.starting_point.1
+            );
         }
     }
 }
