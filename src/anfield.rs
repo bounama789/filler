@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::process::{Piece, Robot};
 
-#[derive(Debug,Default)]
+#[derive(Debug, Default)]
 pub struct Anfield {
     pub width: u8,
     pub height: u8,
@@ -19,7 +19,7 @@ impl Anfield {
     }
 
     pub fn can_place(&self, coord: (u8, u8), robot: &Robot, piece: &Piece) -> bool {
-        let mut touch = 1;
+        let mut touch = 0;
         if let Some(c) = self.occupation.get(&coord) {
             if *c == robot.id {
                 touch += 1;
@@ -29,11 +29,13 @@ impl Anfield {
         }
         for i in 0..piece.height {
             for j in 0..piece.width {
-                if let Some(c) = self.occupation.get(&(&coord.0 + i, &coord.1 + j)) {
-                    if *c == robot.id && touch < 1 {
-                        touch += 1
-                    } else {
-                        return false;
+                if piece.ceils[i as usize][j as usize] != '.' {
+                    if let Some(c) = self.occupation.get(&(&coord.0 + j, &coord.1 + i)) {
+                        if *c == robot.id && touch < 1 {
+                            touch += 1
+                        } else {
+                            return false;
+                        }
                     }
                 }
             }

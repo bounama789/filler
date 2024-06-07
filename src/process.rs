@@ -33,20 +33,51 @@ pub struct Piece {
 
 impl Piece {
     pub fn new(ceils: Vec<Vec<char>>) -> Self {
+        let ceils = Self::remove_empty_rows_and_columns(ceils);
         Self {
             width: ceils[0].len() as u8,
             height: ceils.len() as u8,
             ceils,
         }
     }
+
+    fn remove_empty_rows_and_columns(mut grid: Vec<Vec<char>>) -> Vec<Vec<char>> {
+        // Remove rows that contain only '.'
+        grid.retain(|row| row.iter().any(|&c| c != '.'));
+
+        if grid.is_empty() {
+            return grid;
+        }
+
+        let col_len = grid[0].len();
+        let mut col_to_keep = vec![false; col_len];
+
+        for i in 0..col_len {
+            for row in &grid {
+                if row[i] != '.' {
+                    col_to_keep[i] = true;
+                    break;
+                }
+            }
+        }
+
+        for row in &mut grid {
+            let mut new_row = Vec::new();
+            for (i, &c) in row.iter().enumerate() {
+                if col_to_keep[i] {
+                    new_row.push(c);
+                }
+            }
+            *row = new_row;
+        }
+        grid
+    }
 }
 
 pub struct State {
     pub anfield: Anfield,
     pub robot: Robot,
-    pub other_robot: Robot,
     pub current_piece: Piece,
-    pub prg_name: String,
     pub started: bool,
 }
 
@@ -64,9 +95,7 @@ impl State {
         Self {
             anfield: Anfield::default(),
             robot: Robot::default(),
-            other_robot: Robot::default(),
             current_piece: Piece::default(),
-            prg_name: Self::prog_name(),
             started: false,
         }
     }
@@ -74,7 +103,7 @@ impl State {
     pub fn parse(&mut self, lines: Vec<String>) {
         let mut anfield: Anfield = Anfield::new(0, 0);
         let mut robot: Robot;
-        let mut other_robot: Robot;
+        // let mut other_robot: Robot;
 
         let mut pidx = 1;
 
@@ -85,7 +114,7 @@ impl State {
         let mut parsing_anfield = false;
         let mut anfield_strtidx: usize = 0;
         for (idx, line) in lines.iter().enumerate() {
-            if line.starts_with("$$$") && line.contains(&Self::prog_name()) {
+            if line.starts_with("$$$") {
                 if line.contains("p1") {
                     robot = Robot::new(1, ['a', '@'])
                 } else {
@@ -93,20 +122,13 @@ impl State {
                     robot = Robot::new(2, ['s', '$'])
                 }
                 players.push(robot)
-            } else if line.starts_with("$$$") {
-                if line.contains("p1") {
-                    other_robot = Robot::new(1, ['a', '@'])
-                } else {
-                    other_robot = Robot::new(2, ['s', '$'])
-                }
-                players.push(other_robot)
             } else if line.starts_with("Anfield") {
                 let part = line
                     .trim_matches(|c: char| !c.is_numeric())
                     .split_once(' ')
-                    .unwrap();
-                let width: u8 = part.0.parse().unwrap();
-                let height: u8 = part.1.parse().unwrap();
+                    .expect("error while spliting");
+                let width: u8 = part.0.parse().expect("error while parsing");
+                let height: u8 = part.1.parse().expect("error while parsing");
                 anfield = Anfield::new(width, height)
             } else if line.trim().chars().all(char::is_numeric) {
                 parsing_anfield = true;
@@ -145,15 +167,18 @@ impl State {
         }
         self.anfield = anfield;
 
-        println!("{:?}",self.anfield);
-        self.robot = players.iter().find(|p| p.id == pidx).unwrap().clone();
-        println!("{:?}",self.robot);
+        // println!("{:?}",self.anfield);
+        self.robot = players
+            .iter()
+            .find(|p| p.id == pidx)
+            .expect("error")
+            .clone();
+        // println!("{:?}",self.robot);
+        // println!("{:?}",lines);
 
-        self.other_robot = players.iter().find(|p| p.id != pidx).unwrap().clone();
-        println!("{:?}",self.other_robot);
-
+        // println!("{:?}",pieces_ceils);
         self.current_piece = Piece::new(pieces_ceils);
-        println!("{:?}",self.current_piece);
+        // println!("{:?}", self.current_piece);
 
         self.started = true;
     }
