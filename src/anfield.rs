@@ -31,7 +31,7 @@ impl Anfield {
             for j in 0..piece.width {
                 if piece.ceils[i as usize][j as usize] != '.' {
                     if let Some(c) = self.occupation.get(&(&coord.0 + j, &coord.1 + i)) {
-                        if *c == robot.id && touch < 1 {
+                        if *c == robot.id  {
                             touch += 1
                         } else {
                             return false;

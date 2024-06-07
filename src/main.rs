@@ -11,7 +11,6 @@ fn main() {
     loop {
         'read_buffer: for line in stdin.lock().lines() {
             if let Ok(l) = line {
-               
                 if l.starts_with("Piece") {
                     let part = l
                         .trim_matches(|c: char| !c.is_numeric())
@@ -31,18 +30,30 @@ fn main() {
             }
         }
 
+        let mut placed = false;
+
         if !started {
             state.parse(input_lines.clone());
             input_lines.clear();
             started = true;
 
-            'search:for i in (state.robot.starting_point.1-state.current_piece.height as u8)..(state.robot.starting_point.1+state.current_piece.height as u8) {
-                for j in (state.robot.starting_point.0-state.current_piece.width as u8)..(state.robot.starting_point.0+state.current_piece.width as u8) {
-                    if state.anfield.can_place((j,i), &state.robot, &state.current_piece) {
-                        println!("{} {}",j,i);
+            'search: for i in 0
+                ..state.anfield.height
+            {
+                for j in 0..state.anfield.width
+                {
+                    if state
+                        .anfield
+                        .can_place((j, i), &state.robot, &state.current_piece)
+                    {
+                        println!("{} {}", j, i);
+                        placed = true;
                         break 'search;
                     }
                 }
+            }
+            if !placed {
+                println!("{:#?}", state.current_piece.ceils);
             }
             // println!(
             //     "{} {}",
@@ -50,10 +61,22 @@ fn main() {
             //     state.robot.starting_point.1 - state.current_piece.height+1
             // );
         } else {
-            println!(
-                "{} {}",
-                state.robot.starting_point.0, state.robot.starting_point.1
-            );
+            'search: for i in (state.robot.starting_point.1 - state.current_piece.height as u8)
+                ..(state.robot.starting_point.1 + state.current_piece.height as u8)
+            {
+                for j in (state.robot.starting_point.0 - state.current_piece.width as u8)
+                    ..(state.robot.starting_point.0 + state.current_piece.width as u8)
+                {
+                    if state
+                        .anfield
+                        .can_place((j, i), &state.robot, &state.current_piece)
+                    {
+                        println!("{} {}", j, i);
+                        placed = true;
+                        break 'search;
+                    }
+                }
+            }
         }
     }
 }
