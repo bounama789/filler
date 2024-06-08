@@ -33,7 +33,7 @@ pub struct Piece {
 
 impl Piece {
     pub fn new(ceils: Vec<Vec<char>>) -> Self {
-        // let ceils = Self::remove_empty_rows_and_columns(ceils);
+        let ceils = Self::remove_empty_rows_and_columns(ceils);
         Self {
             width: ceils[0].len() as u8,
             height: ceils.len() as u8,
@@ -102,12 +102,16 @@ impl State {
 
     pub fn parse(&mut self, lines: Vec<String>) {
         let mut anfield: Anfield = Anfield::new(0, 0);
-        let mut robot: Robot;
+        let mut robot = if self.started {
+            Some(self.robot.clone())
+        } else {
+            None
+        };
         // let mut other_robot: Robot;
 
         let mut pidx = 1;
 
-        let mut players: Vec<Robot> = Vec::new();
+        // let mut players: Vec<Robot> = Vec::new();
         let mut pieces_ceils = Vec::new();
         let mut parsing_pieces = false;
 
@@ -116,12 +120,14 @@ impl State {
         for (idx, line) in lines.iter().enumerate() {
             if line.starts_with("$$$") {
                 if line.contains("p1") {
-                    robot = Robot::new(1, ['a', '@'])
+                    let r = Robot::new(1, ['a', '@']);
+                    robot = Some(r);
                 } else {
                     pidx = 2;
-                    robot = Robot::new(2, ['s', '$'])
+                    let r = Robot::new(2, ['s', '$']);
+                    robot = Some(r)
                 }
-                players.push(robot)
+                // players.push(robot)
             } else if line.starts_with("Anfield") {
                 let part = line
                     .trim_matches(|c: char| !c.is_numeric())
@@ -145,18 +151,27 @@ impl State {
             }
             if parsing_anfield {
                 let l = line.trim_matches(|c: char| !c.is_ascii_punctuation());
-                l.char_indices().for_each(|(i, c)| {
-                    if c != '.' {
-                        for r in players.iter_mut() {
-                            if r.characters.contains(&c) {
-                                r.set_starting_point(i as u8, (idx - anfield_strtidx) as u8);
-                                anfield
-                                    .occupation
-                                    .insert((i as u8, (idx - anfield_strtidx) as u8), r.id);
+                if let Some(mut p) = robot.to_owned() {
+                    l.char_indices().for_each(|(i, c)| {
+                        if c != '.' {
+                            if !self.started {
+                                if p.characters.contains(&c) {
+                                    p.set_starting_point(i as u8, (idx - anfield_strtidx) as u8);
+                                    anfield
+                                        .occupation
+                                        .insert((i as u8, (idx - anfield_strtidx) as u8), p.id);
+                                }
+                                self.robot = p.to_owned();
+                            } else {
+                                if self.robot.characters.contains(&c) {
+                                    anfield
+                                        .occupation
+                                        .insert((i as u8, (idx - anfield_strtidx) as u8), p.id);
+                                }
                             }
                         }
-                    }
-                });
+                    });
+                }
             }
 
             if parsing_pieces {
@@ -168,11 +183,7 @@ impl State {
         self.anfield = anfield;
 
         // println!("{:?}",self.anfield);
-        self.robot = players
-            .iter()
-            .find(|p| p.id == pidx)
-            .expect("error")
-            .clone();
+
         // println!("{:?}",self.robot);
         // println!("{:?}",lines);
 
