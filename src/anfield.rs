@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, result};
 
 use crate::{
     process::{Piece, Robot},
@@ -12,7 +12,7 @@ pub struct Anfield {
     pub occupation: HashMap<(i32, i32), i32>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Ceil {
     pub x: i32,
     pub y: i32,
@@ -40,7 +40,7 @@ impl Anfield {
                         // println!("{:?}", self.occupation);
                         if *c == robot.id {
                             touch += 1
-                        } else {
+                        } else if *c != 0 {
                             return false;
                         }
                     }
@@ -65,8 +65,27 @@ impl Anfield {
                 }
             }
         }
-        positions.sort_by(|a, b| a.score(self).total_cmp(&b.score(self)));
+        positions.sort_by(|a, b| a.score(self, robot).total_cmp(&b.score(self, robot)));
         positions
+    }
+
+    pub fn get_opponent_border(&self, robot: &Robot) -> Vec<Ceil> {
+        let mut result = Vec::new();
+        let opponent_occupation: Vec<Ceil> = self
+            .occupation
+            .iter()
+            .filter(|&(_, id)| *id != robot.id)
+            .map(|c: (&(i32, i32), &i32)| Ceil::new(c.0 .0, c.0 .1, *c.1))
+            .collect();
+
+        for oc in opponent_occupation {
+            for ceil in oc.get_neightboor(self) {
+                if ceil.occupied_by == 0 {
+                    result.push(ceil)
+                }
+            }
+        }
+        result
     }
 }
 
@@ -81,13 +100,16 @@ impl Ceil {
 
     pub fn blocking_potential(&self, anfield: &Anfield) -> i32 {
         let mut blocking_score = 0;
-
         for ceil in self.get_neightboor(anfield) {
-            if ceil.occupied_by != self.occupied_by {
-                blocking_score += 1;
+            if ceil.occupied_by != self.occupied_by && ceil.occupied_by != 0 {
+                blocking_score += 20 * ceil
+                    .get_neightboor(anfield)
+                    .iter()
+                    .filter(|c| c.occupied_by == 0)
+                    .count() / 8;
             }
         }
-        blocking_score
+        (20 * blocking_score / (8*20)) as i32
     }
 
     pub fn get_neightboor(&self, anfield: &Anfield) -> Vec<Ceil> {
@@ -122,7 +144,5 @@ impl Ceil {
 
         neighboors
     }
-    pub fn distance_to(other_ceil: &Ceil) -> i32 {
-        
-    }
+    // pub fn distance_to(other_ceil: &Ceil) -> i32 {}
 }

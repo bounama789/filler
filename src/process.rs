@@ -1,4 +1,7 @@
-use std::{cmp::min, env};
+use std::{
+    cmp::{max, min},
+    env,
+};
 
 use crate::anfield::{Anfield, Ceil};
 
@@ -122,8 +125,7 @@ impl State {
                 } else {
                     let r = Robot::new(2, ['s', '$']);
                     robot = Some(r);
-                     opponent = Robot::new(1, ['a', '@']);
-
+                    opponent = Robot::new(1, ['a', '@']);
                 }
                 // players.push(robot)
             } else if line.starts_with("Anfield") {
@@ -146,37 +148,41 @@ impl State {
             if parsing_anfield {
                 let l =
                     line.trim_matches(|c: char| !c.is_ascii_punctuation() && c != 'a' && c != 's');
-                    l.char_indices().for_each(|(i, c)| {
-                        if c != '.' {
-                            if !self.started {
-                                if let Some(p) = robot.to_owned() {
+                l.char_indices().for_each(|(i, c)| {
+                    if c != '.' {
+                        if !self.started {
+                            if let Some(p) = robot.to_owned() {
                                 if p.characters.contains(&c) {
                                     self.robot = p.to_owned();
                                     self.robot.set_starting_point(
                                         i as i32,
                                         (idx - anfield_strtidx) as i32,
                                     );
-                                }else {
+                                } else {
                                     self.opponent = opponent.to_owned();
                                     self.opponent.set_starting_point(
                                         i as i32,
                                         (idx - anfield_strtidx) as i32,
                                     );
-                                }}
-                            }
-                            if self.robot.characters.contains(&c) {
-                                anfield
-                                    .occupation
-                                    .insert((i as i32, (idx - anfield_strtidx) as i32), self.robot.id);
-                            } else {
-                                let pidx = if self.robot.id == 1 { 2 } else { 1 };
-                                anfield
-                                    .occupation
-                                    .insert((i as i32, (idx - anfield_strtidx) as i32), pidx);
+                                }
                             }
                         }
-                    });
-                
+                        if self.robot.characters.contains(&c) {
+                            anfield
+                                .occupation
+                                .insert((i as i32, (idx - anfield_strtidx) as i32), self.robot.id);
+                        } else {
+                            let pidx = if self.robot.id == 1 { 2 } else { 1 };
+                            anfield
+                                .occupation
+                                .insert((i as i32, (idx - anfield_strtidx) as i32), pidx);
+                        }
+                    } else {
+                        anfield
+                            .occupation
+                            .insert((i as i32, (idx - anfield_strtidx) as i32), 0);
+                    }
+                });
             }
 
             if parsing_pieces {
@@ -212,58 +218,89 @@ impl Position {
         let mut score = 0;
         for i in 0..self.piece.height {
             for j in 0..self.piece.width {
-                let ceil = Ceil::new(self.x + j, self.y + i, self.robot_idx);
-                score += ceil.blocking_potential(anfield)
+                if self.piece.ceils[i as usize][j as usize] != '.' {
+                    let ceil = Ceil::new(self.x + j, self.y + i, self.robot_idx);
+                    score += ceil.blocking_potential(anfield)
+                }
             }
         }
-        // println!("blocking {score}");
+        println!("blocking {score}");
         score
     }
 
     fn expansion_score(&self, anfield: &Anfield) -> i32 {
         let mut score = 0;
-
+        let mut space = 0;
         for i in 0..self.piece.height {
             for j in 0..self.piece.width {
-                let ceil = Ceil::new(self.x + j, self.y + i, self.robot_idx);
-
-                for c in ceil.get_neightboor(anfield) {
-                    if c.occupied_by == self.robot_idx {
-                        if c.get_neightboor(anfield).iter().any(|c|c.occupied_by != self.robot_idx) {
-                           
-                            score += 1
-
-                        }
+                if self.piece.ceils[i as usize][j as usize] != '.' {
+                    space += 1;
+                    let ceil = Ceil::new(self.x + j, self.y + i, self.robot_idx);
+                    let mut c_score = 0;
+                    for c in ceil.get_neightboor(anfield) {
+                        let count = c
+                            .get_neightboor(anfield)
+                            .iter()
+                            .filter(|c| c.occupied_by == self.robot_idx)
+                            .count();
+                        c_score += 8 - count;
                     }
+                    score += c_score / 8;
                 }
             }
         }
-        // println!("expansion {score}");
+        println!("expansion {}",20 * score / (space*8));
 
-        score
+        (20 * score / space) as i32
     }
 
     fn edge_proximity(&self, anfield: &Anfield) -> i32 {
         let mut score = 0;
         for i in 0..self.piece.height {
             for j in 0..self.piece.width {
-                let x = self.x + j;
-                let y = self.y + i;
-                let row_dist = min(y, anfield.height - y - 1);
-                let col_dist = min(x, anfield.width - x - 1);
-                score += (row_dist+ col_dist)/2
+                if self.piece.ceils[i as usize][j as usize] != '.' {
+                    let x = self.x + j;
+                    let y = self.y + i;
+                    let row_dist = min(y, anfield.height - y - 1);
+                    let col_dist = min(x, anfield.width - x - 1);
+                    score += min(row_dist , col_dist)
+                }
             }
         }
-        // println!("edge proximity{score}");
+        println!(
+            "edge proximity: {}",
+            20 * score / max(anfield.height, anfield.width)
+        );
 
-        score
+        20 * score / max(anfield.height, anfield.width)
     }
 
-    pub fn score(&self, anfield: &Anfield) -> f32 {
-        let score = (self.blocking_score(anfield) * 5) as f32
+    fn surround_score(&self, anfield: &Anfield, robot: &Robot) -> i32 {
+        let mut score = 0;
+        let mut space = 0;
+        for i in 0..self.piece.height {
+            for j in 0..self.piece.width {
+                if self.piece.ceils[i as usize][j as usize] != '.' {
+                    space += 1;
+                    let x = self.x + j;
+                    let y = self.y + i;
+                    let opponent_borders = anfield.get_opponent_border(robot);
+                    if opponent_borders.iter().any(|c| c.x == x && c.y == y) {
+                        score += 1
+                    }
+                }
+            }
+        }
+
+        20 * score / space
+    }
+
+    pub fn score(&self, anfield: &Anfield, robot: &Robot) -> f32 {
+        let score = (self.blocking_score(anfield)) as f32
             + (self.expansion_score(anfield) as f32)
-            + (self.edge_proximity(anfield) as f32*0.5);
-        // println!("total: {score}");
+            + (self.edge_proximity(anfield) as f32);
+        // + (self.surround_score(anfield, robot) * 3) as f32;
+        println!("total: {score}");
 
         score
     }
