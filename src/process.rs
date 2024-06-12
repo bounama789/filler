@@ -236,22 +236,17 @@ impl Position {
                 if self.piece.ceils[i as usize][j as usize] != '.' {
                     space += 1;
                     let ceil = Ceil::new(self.x + j, self.y + i, self.robot_idx);
-                    let mut c_score = 0;
                     for c in ceil.get_neightboor(anfield) {
-                        let count = c
-                            .get_neightboor(anfield)
-                            .iter()
-                            .filter(|c| c.occupied_by == self.robot_idx)
-                            .count();
-                        c_score += 8 - count;
+                        if c.occupied_by == 0 {
+                            score += 1;
+                        }
                     }
-                    score += c_score / 8;
                 }
             }
         }
         // println!("expansion {}",20 * score / (space*8));
 
-        (20 * score / space) as i32
+        (20 * score / (space * 8)) as i32
     }
 
     fn edge_proximity(&self, anfield: &Anfield) -> i32 {
@@ -263,7 +258,7 @@ impl Position {
                     let y = self.y + i;
                     let row_dist = min(y, anfield.height - y - 1);
                     let col_dist = min(x, anfield.width - x - 1);
-                    score += min(row_dist, col_dist)
+                    score += (row_dist + col_dist) / 2
                 }
             }
         }
@@ -275,32 +270,88 @@ impl Position {
         20 * score / max(anfield.height, anfield.width)
     }
 
-    fn surround_score(&self, anfield: &Anfield, robot: &Robot) -> i32 {
+    pub fn surround_score(&self, anfield: &Anfield, robot: &Robot) -> i32 {
+        let mut min_distance = f32::MAX;
         let mut score = 0;
-        let mut space = 0;
-        for i in 0..self.piece.height {
-            for j in 0..self.piece.width {
-                if self.piece.ceils[i as usize][j as usize] != '.' {
-                    space += 1;
-                    let x = self.x + j;
-                    let y = self.y + i;
-                    let opponent_borders = anfield.get_opponent_border(robot);
-                    if opponent_borders.iter().any(|c| c.x == x && c.y == y) {
-                        score += 1
+
+        for ((x, y), _) in anfield
+            .occupation
+            .iter()
+            .filter(|&(_, id)| *id != robot.id && *id != 0)
+        {
+            if let Some(id) = anfield.occupation.get(&(*x, *y)) {
+                if *id != 0 && *id != robot.id {
+                    let distance = (((self.x as i32 - *x as i32) as f32).powf(2.0)
+                        + ((self.y as i32 - *y as i32) as f32).powf(2.0))
+                    .sqrt();
+                    if distance < min_distance {
+                        min_distance = distance;
+                    }
+                }
+                for di in -1..=1 {
+                    for dj in -1..=1 {
+                        let ni = *y as isize + di;
+                        let nj = *x as isize + dj;
+                        if ni >= 0
+                            && ni < anfield.height as isize
+                            && nj >= 0
+                            && nj < anfield.width as isize
+                        {
+                            let ni = ni as i32;
+                            let nj = nj as i32;
+                            if let Some(id) = anfield.occupation.get(&(nj, ni)) {
+                                if *id == 0 {
+                                    score += 1;
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
+        // for i in 0..self.piece.height {
+        //     for j in 0..self.piece.width {
+        //         for di in -1..=1 {
+        //             for dj in -1..=1 {
+        //                 let ni = self.y as isize + i as isize + di;
+        //                 let nj = self.x as isize + j as isize + dj;
+        //                 if ni >= 0
+        //                     && ni < anfield.height as isize
+        //                     && nj >= 0
+        //                     && nj < anfield.width as isize
+        //                 {
+        //                     let ni = ni as i32;
+        //                     let nj = nj as i32;
+        //                     if let Some(id) = anfield.occupation.get(&(ni, nj)) {
+        //                         if *id == 0 {
+        //                             score += 1;
+        //                         }
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
 
-        20 * score / space
+        // println!("{score}");
+        // Normalize encirclement score to be a factor in evaluation
+        let normalized_encirclement_score = score as f32 / (anfield.height * anfield.width) as f32;
+        // println!("{}",normalized_encirclement_score);
+        // Combine min_distance and encirclement_score in the final score
+        (min_distance - normalized_encirclement_score) as i32
+        // score
     }
 
     pub fn score(&self, anfield: &Anfield, robot: &Robot) -> f32 {
-        let score = (self.blocking_score(anfield) * 10) as f32
-            + (self.expansion_score(anfield) as f32 * 1.8)
+        let blocking_score = (self.blocking_score(anfield) * 10) as f32;
+        let mut score = blocking_score - (self.expansion_score(anfield) as f32)
             + (self.edge_proximity(anfield) as f32);
-        // + (self.surround_score(anfield, robot) * 3) as f32;
+        // + (self.surround_score(anfield, robot)) as f32;
         // println!("total: {score}");
+
+        if blocking_score > 0.0 {
+            score -= self.surround_score(anfield, robot) as f32;
+        }
 
         score
     }

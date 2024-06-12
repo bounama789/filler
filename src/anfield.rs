@@ -1,4 +1,4 @@
-use std::{collections::HashMap, result};
+use std::collections::HashMap;
 
 use crate::{
     process::{Piece, Robot},
@@ -37,7 +37,6 @@ impl Anfield {
                         return false;
                     }
                     if let Some(c) = self.occupation.get(&(&coord.0 + j, &coord.1 + i)) {
-                        // println!("{:?}", self.occupation);
                         if *c == robot.id {
                             touch += 1
                         } else if *c != 0 {

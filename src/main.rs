@@ -33,27 +33,15 @@ fn main() {
         state.parse(input_lines.clone());
         input_lines.clear();
 
-        let mut positions = state
+        let positions = state
             .anfield
             .potential_positions(&state.current_piece, &state.robot);
 
-        // if state.robot.area.0.1 > state.anfield.height/2 {
-        //     positions.sort_by_key(|p|p.y);
-        // }
-
-
         if let Some(p) = positions.last() {
-            println!("{} {}",p.x,p.y);
+            println!("{} {}", p.x, p.y);
             state.robot.update_area(p, &state.anfield)
-            // println!("{:#?}", state.current_piece.ceils);
-            // println!("{:#?}", state.anfield);
         } else {
             println!("0 0");
         }
-        // println!(
-        //     "{} {}",
-        //     state.robot.starting_point.0,
-        //     state.robot.starting_point.1 - state.current_piece.height+1
-        // );
     }
 }
