@@ -224,8 +224,8 @@ impl Position {
                 }
             }
         }
-        println!("blocking {score}");
-        score
+        // println!("blocking {score}");
+        20 * score / 8
     }
 
     fn expansion_score(&self, anfield: &Anfield) -> i32 {
@@ -249,7 +249,7 @@ impl Position {
                 }
             }
         }
-        println!("expansion {}",20 * score / (space*8));
+        // println!("expansion {}",20 * score / (space*8));
 
         (20 * score / space) as i32
     }
@@ -263,14 +263,14 @@ impl Position {
                     let y = self.y + i;
                     let row_dist = min(y, anfield.height - y - 1);
                     let col_dist = min(x, anfield.width - x - 1);
-                    score += min(row_dist , col_dist)
+                    score += min(row_dist, col_dist)
                 }
             }
         }
-        println!(
-            "edge proximity: {}",
-            20 * score / max(anfield.height, anfield.width)
-        );
+        // println!(
+        //     "edge proximity: {}",
+        //     20 * score / max(anfield.height, anfield.width)
+        // );
 
         20 * score / max(anfield.height, anfield.width)
     }
@@ -296,11 +296,11 @@ impl Position {
     }
 
     pub fn score(&self, anfield: &Anfield, robot: &Robot) -> f32 {
-        let score = (self.blocking_score(anfield)) as f32
-            + (self.expansion_score(anfield) as f32)
+        let score = (self.blocking_score(anfield) * 10) as f32
+            + (self.expansion_score(anfield) as f32 * 1.8)
             + (self.edge_proximity(anfield) as f32);
         // + (self.surround_score(anfield, robot) * 3) as f32;
-        println!("total: {score}");
+        // println!("total: {score}");
 
         score
     }
