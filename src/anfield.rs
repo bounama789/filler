@@ -49,8 +49,8 @@ impl Anfield {
         touch == 1
     }
 
-    pub fn potential_positions(&self, piece: &Piece, robot: &Robot) -> Vec<Position> {
-        let mut positions = Vec::new();
+    pub fn potential_positions(&self, piece: &Piece, robot: &Robot) -> HashMap<Position,f32> {
+        let mut positions = HashMap::new();
         for i in 0..self.height {
             for j in 0..self.width {
                 if self.can_place((j, i), robot, piece) {
@@ -60,11 +60,11 @@ impl Anfield {
                         robot_idx: robot.id,
                         piece: piece.clone(),
                     };
-                    positions.push(p)
+                    positions.insert(p.clone(),p.score(self, robot));
                 }
             }
         }
-        positions.sort_by(|a, b| a.score(self, robot).total_cmp(&b.score(self, robot)));
+
         positions
     }
 

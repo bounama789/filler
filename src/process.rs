@@ -3,7 +3,10 @@ use std::{
     env,
 };
 
-use crate::anfield::{Anfield, Ceil};
+use crate::{
+    anfield::{Anfield, Ceil},
+    logger::console_log,
+};
 
 #[derive(Debug, Clone, Default)]
 pub struct Robot {
@@ -54,7 +57,7 @@ impl Robot {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 
 pub struct Piece {
     pub width: i32,
@@ -206,6 +209,7 @@ impl State {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Position {
     pub x: i32,
     pub y: i32,
@@ -224,7 +228,7 @@ impl Position {
                 }
             }
         }
-        // println!("blocking {score}");
+        console_log(format!("blocking {}", 20 * score / 8));
         20 * score / 8
     }
 
@@ -244,7 +248,7 @@ impl Position {
                 }
             }
         }
-        // println!("expansion {}",20 * score / (space*8));
+        console_log(format!("expansion {}", 20 * score / (space * 8)));
 
         (20 * score / (space * 8)) as i32
     }
@@ -262,10 +266,10 @@ impl Position {
                 }
             }
         }
-        // println!(
-        //     "edge proximity: {}",
-        //     20 * score / max(anfield.height, anfield.width)
-        // );
+        console_log(format!(
+            "edge proximity: {}",
+            20 * score / max(anfield.height, anfield.width)
+        ));
 
         20 * score / max(anfield.height, anfield.width)
     }
@@ -282,7 +286,7 @@ impl Position {
             if let Some(id) = anfield.occupation.get(&(*x, *y)) {
                 if *id != 0 && *id != robot.id {
                     let distance = (((self.x as i32 - *x as i32) as f32).powf(2.0)
-                        + ((self.y as i32 - *y as i32) as f32).powf(2.0))
+                        + ((self.y as i32 - *y as i32) as f32).powf(2.0)).abs()
                     .sqrt();
                     if distance < min_distance {
                         min_distance = distance;
@@ -309,50 +313,24 @@ impl Position {
                 }
             }
         }
-        // for i in 0..self.piece.height {
-        //     for j in 0..self.piece.width {
-        //         for di in -1..=1 {
-        //             for dj in -1..=1 {
-        //                 let ni = self.y as isize + i as isize + di;
-        //                 let nj = self.x as isize + j as isize + dj;
-        //                 if ni >= 0
-        //                     && ni < anfield.height as isize
-        //                     && nj >= 0
-        //                     && nj < anfield.width as isize
-        //                 {
-        //                     let ni = ni as i32;
-        //                     let nj = nj as i32;
-        //                     if let Some(id) = anfield.occupation.get(&(ni, nj)) {
-        //                         if *id == 0 {
-        //                             score += 1;
-        //                         }
-        //                     }
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
-
-        // println!("{score}");
-        // Normalize encirclement score to be a factor in evaluation
-        let normalized_encirclement_score = score as f32 / (anfield.height * anfield.width) as f32;
-        // println!("{}",normalized_encirclement_score);
-        // Combine min_distance and encirclement_score in the final score
-        (min_distance - normalized_encirclement_score) as i32
+        // let score = score as f32 / (anfield.height * anfield.width) as f32;
+        console_log(format!("surround: {}", (min_distance - score as f32).abs()));
+        (min_distance - (score) as f32).abs() as i32
         // score
     }
 
     pub fn score(&self, anfield: &Anfield, robot: &Robot) -> f32 {
-        let blocking_score = (self.blocking_score(anfield) * 10) as f32;
-        let mut score = blocking_score - (self.expansion_score(anfield) as f32)
-            + (self.edge_proximity(anfield) as f32);
-        // + (self.surround_score(anfield, robot)) as f32;
-        // println!("total: {score}");
+        let blocking_score = (self.blocking_score(anfield) * 10) as f32; // *10 because it's more important
+        let mut score = blocking_score + (self.edge_proximity(anfield) as f32);
+        score += (self.surround_score(anfield, robot)) as f32*2.0;
+        // if blocking_score > 0.0 {
+        //     // score += (self.expansion_score(anfield) as f32);
+        //     score-= (self.edge_proximity(anfield) as f32)
+        // }
 
-        if blocking_score > 0.0 {
-            score -= self.surround_score(anfield, robot) as f32;
-        }
+        console_log(format!("total: {score}"));
 
+        console_log(format!("position: {:?}", (self.x, self.y)));
         score
     }
 }
