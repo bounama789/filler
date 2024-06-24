@@ -1,4 +1,6 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Mutex};
+
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::{
     process::{Piece, Robot},
@@ -10,6 +12,7 @@ pub struct Anfield {
     pub width: i32,
     pub height: i32,
     pub occupation: HashMap<(i32, i32), i32>,
+    pub opp_occupation: Vec<Ceil>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -25,7 +28,22 @@ impl Anfield {
             width,
             height,
             occupation: HashMap::new(),
+            opp_occupation: Vec::new(),
         }
+    }
+
+    pub fn update_opp_occupation(&mut self, robot: &Robot) {
+        self.opp_occupation = self
+            .occupation
+            .iter()
+            .filter(|&(c, id)| {
+                let ceil = Ceil::new(c.0, c.1, *id);
+                let n = ceil.get_neightboor(&self);
+                let c = n.iter().filter(|c| c.occupied_by == 0).count();
+                c > 2 && (*id != robot.id && *id != 0)
+            })
+            .map(|(&(x, y), id)| Ceil::new(x, y, *id))
+            .collect()
     }
 
     pub fn can_place(&self, coord: (i32, i32), robot: &Robot, piece: &Piece) -> bool {
@@ -49,10 +67,11 @@ impl Anfield {
         touch == 1
     }
 
-    pub fn potential_positions(&self, piece: &Piece, robot: &Robot) -> HashMap<Position,f32> {
-        let mut positions = HashMap::new();
-        for i in 0..self.height {
-            for j in 0..self.width {
+    pub fn potential_positions(&self, piece: &Piece, robot: &Robot) -> HashMap<Position, f32> {
+        let positions = Mutex::new(HashMap::new());
+        (0..self.height).into_par_iter().for_each(|i| {
+            (0..self.width).into_par_iter().for_each(|j| {
+                let mut pos = positions.lock().unwrap();
                 if self.can_place((j, i), robot, piece) {
                     let p = Position {
                         x: j,
@@ -60,31 +79,13 @@ impl Anfield {
                         robot_idx: robot.id,
                         piece: piece.clone(),
                     };
-                    positions.insert(p.clone(),p.score(self, robot));
+                    pos.insert(p.clone(), p.score(self, robot));
                 }
-            }
-        }
+            })
+        });
+        let pos = positions.lock().unwrap();
 
-        positions
-    }
-
-    pub fn get_opponent_border(&self, robot: &Robot) -> Vec<Ceil> {
-        let mut result = Vec::new();
-        let opponent_occupation: Vec<Ceil> = self
-            .occupation
-            .iter()
-            .filter(|&(_, id)| *id != robot.id)
-            .map(|c: (&(i32, i32), &i32)| Ceil::new(c.0 .0, c.0 .1, *c.1))
-            .collect();
-
-        for oc in opponent_occupation {
-            for ceil in oc.get_neightboor(self) {
-                if ceil.occupied_by == 0 {
-                    result.push(ceil)
-                }
-            }
-        }
-        result
+        pos.clone()
     }
 }
 
@@ -101,47 +102,31 @@ impl Ceil {
         let mut blocking_score = 0;
         for ceil in self.get_neightboor(anfield) {
             if ceil.occupied_by != self.occupied_by && ceil.occupied_by != 0 {
-                blocking_score += 20 * ceil
-                    .get_neightboor(anfield)
-                    .iter()
-                    .filter(|c| c.occupied_by == 0)
-                    .count() / 8;
+                blocking_score += 20
+                    * ceil
+                        .get_neightboor(anfield)
+                        .iter()
+                        .filter(|c| c.occupied_by == 0)
+                        .count()
+                    / 8;
             }
         }
-        (20 * blocking_score / (8*20)) as i32
+        (blocking_score / 8) as i32
     }
 
     pub fn get_neightboor(&self, anfield: &Anfield) -> Vec<Ceil> {
         let mut neighboors = Vec::new();
 
-        if let Some(idx) = anfield.occupation.get(&(self.x - 1, self.y - 1)) {
-            neighboors.push(Ceil::new(self.x - 1, self.y - 1, *idx));
-        }
-        if let Some(idx) = anfield.occupation.get(&(self.x, self.y - 1)) {
-            neighboors.push(Ceil::new(self.x, self.y - 1, *idx));
-        }
-        if let Some(idx) = anfield.occupation.get(&(self.x + 1, self.y - 1)) {
-            neighboors.push(Ceil::new(self.x + 1, self.y - 1, *idx));
-        }
-
-        if let Some(idx) = anfield.occupation.get(&(self.x - 1, self.y)) {
-            neighboors.push(Ceil::new(self.x - 1, self.y, *idx));
-        }
-        if let Some(idx) = anfield.occupation.get(&(self.x + 1, self.y)) {
-            neighboors.push(Ceil::new(self.x + 1, self.y, *idx));
-        }
-
-        if let Some(idx) = anfield.occupation.get(&(self.x - 1, self.y + 1)) {
-            neighboors.push(Ceil::new(self.x - 1, self.y + 1, *idx));
-        }
-        if let Some(idx) = anfield.occupation.get(&(self.x, self.y + 1)) {
-            neighboors.push(Ceil::new(self.x, self.y + 1, *idx));
-        }
-        if let Some(idx) = anfield.occupation.get(&(self.x + 1, self.y + 1)) {
-            neighboors.push(Ceil::new(self.x + 1, self.y + 1, *idx));
+        for di in -1..=1 {
+            for dj in -1..=1 {
+                let ni = self.y as isize + di;
+                let nj = self.x as isize + dj;
+                if let Some(idx) = anfield.occupation.get(&(nj as i32, ni as i32)) {
+                    neighboors.push(Ceil::new(nj as i32, ni as i32, *idx));
+                }
+            }
         }
 
         neighboors
     }
-    // pub fn distance_to(other_ceil: &Ceil) -> i32 {}
 }

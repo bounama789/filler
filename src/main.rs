@@ -15,6 +15,7 @@ fn main() {
     if let Some(flag) = args.get(1) {
         if flag.trim() == "-d" || flag.trim() == "--debug" {
             unsafe { flag::DEBUG = true };
+            println!("\nMode: DEBUG")
         }
     }
 
@@ -44,6 +45,8 @@ fn main() {
         state.parse(input_lines.clone());
         input_lines.clear();
 
+        state.anfield.update_opp_occupation(&state.robot);
+
         let mut positions: Vec<_> = state
             .anfield
             .potential_positions(&state.current_piece, &state.robot)
@@ -54,7 +57,7 @@ fn main() {
 
         if let Some(p) = positions.last() {
             println!("{} {}", p.0.x, p.0.y);
-            state.robot.update_area(&p.0, &state.anfield)
+            // state.robot.update_area(&p.0, &state.anfield)
         } else {
             println!("0 0");
         }
