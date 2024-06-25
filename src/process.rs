@@ -31,33 +31,9 @@ impl Robot {
 
     pub fn set_starting_point(&mut self, x: i32, y: i32) {
         self.starting_point = (x, y);
-        self.area = ((x, y),(x, y))
+        self.area = ((x, y), (x, y))
     }
 
-    // pub fn update_area(&mut self, pos: &Position, anfield: &Anfield) {
-    //     for i in 0..pos.piece.height {
-    //         for j in 0..pos.piece.width {
-    //             if pos.x + j >= anfield.width {
-    //                 self.area.1 .0 = anfield.width;
-    //             } else if pos.x + j > self.area.1 .0 {
-    //                 self.area.1 .0 = pos.x + j;
-    //             }
-
-    //             if pos.x + j < self.area.0 .0 {
-    //                 self.area.0 .0 = pos.x + j;
-    //             }
-
-    //             if pos.y + i >= anfield.height {
-    //                 self.area.1 .1 = anfield.height;
-    //             } else if pos.y + i > self.area.1 .1 {
-    //                 self.area.1 .1 = pos.y + i;
-    //             }
-    //             if pos.y + i < self.area.0 .1 {
-    //                 self.area.0 .1 = pos.y + i;
-    //             }
-    //         }
-    //     }
-    // }
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
@@ -107,6 +83,8 @@ impl State {
     }
 
     pub fn parse(&mut self, lines: Vec<String>) {
+        // let mut logger = Logger::new("log.txt").unwrap();
+        // logger.write("parsing...\n");
         let mut anfield: Anfield = Anfield::new(0, 0);
         let mut robot = if self.started {
             Some(self.robot.clone())
@@ -148,6 +126,8 @@ impl State {
                 continue;
             }
             if parsing_anfield {
+                // logger.write("parsing anfield...\n");
+
                 let l =
                     line.trim_matches(|c: char| !c.is_ascii_punctuation() && c != 'a' && c != 's');
                 l.char_indices().for_each(|(i, c)| {
@@ -188,19 +168,27 @@ impl State {
             }
 
             if parsing_pieces {
+                // logger.write("parsing current piece...\n");
+
                 let l = line.trim();
                 let ceils: Vec<char> = l.chars().collect();
                 pieces_ceils.push(ceils)
             }
         }
         self.anfield = anfield;
+        // logger.write(&format!("current piece\n{:#?}",pieces_ceils));
+
         self.current_piece = Piece::new(pieces_ceils);
-        let ((x, y),(x1, y1)) = self.robot.area;
+        let ((x, y), (x1, y1)) = self.robot.area;
         self.robot.area = (
             (x - self.current_piece.width, y - self.current_piece.height),
-            (x1 + self.current_piece.width, y1 + self.current_piece.height),
+            (
+                x1 + self.current_piece.width,
+                y1 + self.current_piece.height,
+            ),
         );
         self.started = true;
+        // logger.write("end parsing");
     }
 }
 
@@ -233,6 +221,8 @@ impl Position {
     }
 
     pub fn surround_score(&self, anfield: &Anfield, robot: &Robot) -> i32 {
+        // let mut logger = Logger::new("log.txt").unwrap();
+        // logger.write("calculating surround score");
         let mut min_distance = Mutex::new(f32::MAX);
         let mut score = Mutex::new(0);
 
@@ -284,8 +274,12 @@ impl Position {
     }
 
     pub fn score(&self, anfield: &Anfield, robot: &Robot) -> f32 {
+        // let mut logger = Logger::new("log.txt").unwrap();
+
         let mut blocking_score = 0;
         let mut edge_proximity = 0;
+        // logger.write(&format!("calculating score\n"));
+
         for i in 0..self.piece.height {
             for j in 0..self.piece.width {
                 if self.piece.ceils[i as usize][j as usize] != '.' {

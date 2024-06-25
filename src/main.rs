@@ -6,10 +6,12 @@ use std::{
 use filler::{flag, State};
 
 fn main() {
+    // let mut logger = Logger::new("log.txt").unwrap();
     let mut input_lines = Vec::new();
     let stdin = io::stdin();
     let mut state = State::new();
     let mut rem_line = i32::MAX;
+
 
     let args: Vec<String> = env::args().collect();
     if let Some(flag) = args.get(1) {
@@ -20,6 +22,7 @@ fn main() {
     }
 
     loop {
+        // logger.write(&format!("\n###############################################\n\nround: {}\n",round));
         'read_buffer: for line in stdin.lock().lines() {
             if let Ok(l) = line {
                 if l.starts_with("Piece") {
