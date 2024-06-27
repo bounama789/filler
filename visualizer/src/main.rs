@@ -1,8 +1,7 @@
-use std::cmp::max;
 use std::io::{self, BufRead};
 use std::sync::Mutex;
 
-use filler::{Anfield, Robot, State};
+use filler::{Anfield, Robot};
 use ggez::conf::WindowMode;
 use ggez::event::{self, EventHandler};
 use ggez::graphics::{self, Color, DrawParam, Mesh, MeshBuilder};
@@ -57,12 +56,11 @@ impl VState {
 
         let mesh_builder = Mutex::new(MeshBuilder::new());
 
-        occ.into_par_iter().for_each(|((col, row), id)| {
+        occ.into_iter().for_each(|((col, row), id)| {
             let mut mb = mesh_builder.lock().unwrap();
             if id != 0 {
-                println!("{id}");
-                let x = col as f32 * cell_size.0 - hx;
-                let y = row as f32 * cell_size.1 - hy;
+                let x = col as f32 * cell_size.0 - cell_size.0;
+                let y = row as f32 * cell_size.1 - cell_size.1;
 
                 let color = if id == 1 { Color::GREEN } else { Color::YELLOW };
 
@@ -83,17 +81,16 @@ impl VState {
         // let mut logger = Logger::new("log.txt").unwrap();
         // logger.write("parsing...\n");
         let mut anfield: Anfield = Anfield::new(0, 0);
-        let  robot1 = if self.started {
+        let robot1 = if self.started {
             self.robot1.clone()
         } else {
             Robot::new(1, ['a', '@'])
         };
-        let  robot2 = if self.started {
+        let robot2 = if self.started {
             self.robot2.clone()
         } else {
             Robot::new(2, ['s', '$'])
         };
-        let mut opponent = Robot::default();
         let mut pieces_cells = Vec::new();
         let mut parsing_pieces = false;
 
@@ -150,17 +147,18 @@ impl VState {
             }
         }
 
+       
+
         if anfield.width != 0 {
             self.anfield = anfield;
-            self.robot1 =robot1;
+            self.robot1 = robot1;
             self.robot2 = robot2
         }
-
 
         // logger.write(&format!("current piece\n{:#?}",pieces_cells));
 
         // self.current_piece = Piece::new(pieces_cells);
-        
+
         self.started = true;
         // logger.write("end parsing");
     }
@@ -172,8 +170,11 @@ impl EventHandler for VState {
         let stdin = io::stdin();
         let mut rem_line = i32::MAX;
 
+        let mut n =0;
+
         'read_buffer: for line in stdin.lock().lines() {
             if let Ok(l) = line {
+                n+=1;
                 if l.starts_with("Piece") {
                     let part = l
                         .trim_matches(|c: char| !c.is_numeric())
@@ -190,6 +191,13 @@ impl EventHandler for VState {
             if rem_line < 1 {
                 break 'read_buffer;
             }
+        }
+
+        if n < input_lines.len() - 1 {
+            for i in n..input_lines.len() {
+                println!("{}", input_lines[i]);
+            }
+            panic!()
         }
 
         self.parse(input_lines.clone());

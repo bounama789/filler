@@ -7,7 +7,7 @@ use crate::{
     Position,
 };
 
-#[derive(Debug, Default)]
+#[derive(Debug,Clone, Default)]
 pub struct Anfield {
     pub width: i32,
     pub height: i32,
