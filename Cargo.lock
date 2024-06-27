@@ -2500,6 +2500,7 @@ name = "visualizer"
 version = "0.1.0"
 dependencies = [
  "ggez",
+ "rayon",
 ]
 
 [[package]]

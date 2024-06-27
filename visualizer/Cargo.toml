@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 ggez = "0.9.3"
+filler = { path = "../filler" }
+rayon = { workspace = true }

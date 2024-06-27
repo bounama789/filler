@@ -1,2 +1,6 @@
 build:
-	cargo b -r && mv ./target
+	mkdir -p bin
+	rm bin/*
+	cargo b -r
+	mv -f target/release/filler ./bin/
+	mv -f target/release/visualizer ./bin/

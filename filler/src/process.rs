@@ -7,7 +7,7 @@ use std::{
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::{
-    anfield::{Anfield, Ceil},
+    anfield::{Anfield, Cell},
     logger::console_log,
 };
 
@@ -33,7 +33,6 @@ impl Robot {
         self.starting_point = (x, y);
         self.area = ((x, y), (x, y))
     }
-
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
@@ -41,19 +40,24 @@ impl Robot {
 pub struct Piece {
     pub width: i32,
     pub height: i32,
-    pub ceils: Vec<Vec<char>>,
+    pub cells: Vec<Vec<char>>,
 }
 
 impl Piece {
-    pub fn new(ceils: Vec<Vec<char>>) -> Self {
+    pub fn new(cells: Vec<Vec<char>>) -> Self {
+        let mut w = 0;
+        if !cells.is_empty() {
+            w = cells[0].len();
+        }
         Self {
-            width: ceils[0].len() as i32,
-            height: ceils.len() as i32,
-            ceils,
+            width: w as i32,
+            height: cells.len() as i32,
+            cells,
         }
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct State {
     pub anfield: Anfield,
     pub robot: Robot,
@@ -92,14 +96,14 @@ impl State {
             None
         };
         let mut opponent = Robot::default();
-        let mut pieces_ceils = Vec::new();
+        let mut pieces_cells = Vec::new();
         let mut parsing_pieces = false;
 
         let mut parsing_anfield = false;
         let mut anfield_strtidx: usize = 0;
         for (idx, line) in lines.iter().enumerate() {
             if line.starts_with("$$$") {
-                if line.contains("p1") {
+                if line.contains("p1") && line.contains(&Self::prog_name()) {
                     let r = Robot::new(1, ['a', '@']);
                     robot = Some(r);
                     opponent = Robot::new(2, ['s', '$']);
@@ -171,14 +175,18 @@ impl State {
                 // logger.write("parsing current piece...\n");
 
                 let l = line.trim();
-                let ceils: Vec<char> = l.chars().collect();
-                pieces_ceils.push(ceils)
+                let cells: Vec<char> = l.chars().collect();
+                pieces_cells.push(cells)
             }
         }
-        self.anfield = anfield;
-        // logger.write(&format!("current piece\n{:#?}",pieces_ceils));
 
-        self.current_piece = Piece::new(pieces_ceils);
+        if anfield.width != 0 {
+            self.anfield = anfield;
+        }
+
+        // logger.write(&format!("current piece\n{:#?}",pieces_cells));
+
+        self.current_piece = Piece::new(pieces_cells);
         let ((x, y), (x1, y1)) = self.robot.area;
         self.robot.area = (
             (x - self.current_piece.width, y - self.current_piece.height),
@@ -204,8 +212,8 @@ impl Position {
     fn blocking_score(&self, anfield: &Anfield, coord: (i32, i32)) -> i32 {
         let x = coord.0;
         let y = coord.1;
-        let ceil = Ceil::new(self.x + x, self.y + y, self.robot_idx);
-        ceil.blocking_potential(anfield)
+        let cell = Cell::new(self.x + x, self.y + y, self.robot_idx);
+        cell.blocking_potential(anfield)
     }
 
     fn edge_proximity(&self, anfield: &Anfield, coord: (i32, i32)) -> i32 {
@@ -230,7 +238,7 @@ impl Position {
             .opp_occupation
             .clone()
             .into_par_iter()
-            .for_each(|Ceil { x, y, .. }| {
+            .for_each(|Cell { x, y, .. }| {
                 let mut m = min_distance.lock().unwrap();
                 let mut s = score.lock().unwrap();
 
@@ -282,7 +290,7 @@ impl Position {
 
         for i in 0..self.piece.height {
             for j in 0..self.piece.width {
-                if self.piece.ceils[i as usize][j as usize] != '.' {
+                if self.piece.cells[i as usize][j as usize] != '.' {
                     blocking_score += self.blocking_score(anfield, (j, i));
                     edge_proximity += self.edge_proximity(anfield, (j, i));
                 }

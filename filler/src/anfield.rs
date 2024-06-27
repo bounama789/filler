@@ -12,11 +12,11 @@ pub struct Anfield {
     pub width: i32,
     pub height: i32,
     pub occupation: HashMap<(i32, i32), i32>,
-    pub opp_occupation: Vec<Ceil>,
+    pub opp_occupation: Vec<Cell>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Ceil {
+pub struct Cell {
     pub x: i32,
     pub y: i32,
     pub occupied_by: i32,
@@ -37,12 +37,12 @@ impl Anfield {
             .occupation
             .iter()
             .filter(|&(c, id)| {
-                let ceil = Ceil::new(c.0, c.1, *id);
-                let n = ceil.get_neightboor(&self);
+                let cell = Cell::new(c.0, c.1, *id);
+                let n = cell.get_neightboor(&self);
                 let c = n.iter().filter(|c| c.occupied_by == 0).count();
                 c > 2 && (*id != robot.id && *id != 0)
             })
-            .map(|(&(x, y), id)| Ceil::new(x, y, *id))
+            .map(|(&(x, y), id)| Cell::new(x, y, *id))
             .collect()
     }
 
@@ -50,7 +50,7 @@ impl Anfield {
         let mut touch = 0;
         for i in 0..piece.height {
             for j in 0..piece.width {
-                if piece.ceils[i as usize][j as usize] != '.' {
+                if piece.cells[i as usize][j as usize] != '.' {
                     if coord.0 + j >= self.width || &coord.1 + i >= self.height {
                         return false;
                     }
@@ -89,7 +89,7 @@ impl Anfield {
     }
 }
 
-impl Ceil {
+impl Cell {
     pub fn new(x: i32, y: i32, robot_idx: i32) -> Self {
         Self {
             x,
@@ -100,10 +100,10 @@ impl Ceil {
 
     pub fn blocking_potential(&self, anfield: &Anfield) -> i32 {
         let mut blocking_score = 0;
-        for ceil in self.get_neightboor(anfield) {
-            if ceil.occupied_by != self.occupied_by && ceil.occupied_by != 0 {
+        for cell in self.get_neightboor(anfield) {
+            if cell.occupied_by != self.occupied_by && cell.occupied_by != 0 {
                 blocking_score += 20
-                    * ceil
+                    * cell
                         .get_neightboor(anfield)
                         .iter()
                         .filter(|c| c.occupied_by == 0)
@@ -114,7 +114,7 @@ impl Ceil {
         (blocking_score / 8) as i32
     }
 
-    pub fn get_neightboor(&self, anfield: &Anfield) -> Vec<Ceil> {
+    pub fn get_neightboor(&self, anfield: &Anfield) -> Vec<Cell> {
         let mut neighboors = Vec::new();
 
         for di in -1..=1 {
@@ -122,7 +122,7 @@ impl Ceil {
                 let ni = self.y as isize + di;
                 let nj = self.x as isize + dj;
                 if let Some(idx) = anfield.occupation.get(&(nj as i32, ni as i32)) {
-                    neighboors.push(Ceil::new(nj as i32, ni as i32, *idx));
+                    neighboors.push(Cell::new(nj as i32, ni as i32, *idx));
                 }
             }
         }
