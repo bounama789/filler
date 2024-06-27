@@ -1,30 +1,24 @@
 use std::io::{self, BufRead};
-use std::sync::Mutex;
 
 use filler::{Anfield, Robot};
 use ggez::conf::WindowMode;
 use ggez::event::{self, EventHandler};
 use ggez::graphics::{self, Color, DrawParam, Mesh, MeshBuilder};
 use ggez::{Context, ContextBuilder, GameResult};
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use visualizer::Grid;
 
 fn main() {
-    // Make a Context.
-    let (mut ctx, event_loop) = ContextBuilder::new("my_game", "Cool Game Author")
+    let (mut ctx, event_loop) = ContextBuilder::new("filler_visualizer", "bcoulibal")
         .window_mode(WindowMode {
             fullscreen_type: ggez::conf::FullscreenType::True,
+            maximized:true,
             ..Default::default()
         })
         .build()
         .expect("aieee, could not create ggez context!");
 
-    // Create an instance of your event handler.
-    // Usually, you should provide it with the Context object to
-    // use when setting your game up.
     let my_game = VState::new(&mut ctx);
 
-    // Run!
     event::run(ctx, event_loop, my_game);
 }
 
@@ -51,20 +45,17 @@ impl VState {
     pub fn fill_grid(&self) -> MeshBuilder {
         let occ = self.anfield.occupation.to_owned();
         let cell_size = self.grid.cell_size;
-        let hx = cell_size.0 / 2.0;
-        let hy = cell_size.1 / 2.0;
 
-        let mesh_builder = Mutex::new(MeshBuilder::new());
+        let mesh_builder = &mut MeshBuilder::new();
 
         occ.into_iter().for_each(|((col, row), id)| {
-            let mut mb = mesh_builder.lock().unwrap();
             if id != 0 {
-                let x = col as f32 * cell_size.0 - cell_size.0;
-                let y = row as f32 * cell_size.1 - cell_size.1;
+                let x = self.grid.rect.x + col as f32 * cell_size.0;
+                let y = self.grid.rect.y + row as f32 * cell_size.1;
 
                 let color = if id == 1 { Color::GREEN } else { Color::YELLOW };
 
-                mb.rectangle(
+                mesh_builder.rectangle(
                     graphics::DrawMode::fill(),
                     graphics::Rect::new(x, y, cell_size.0, cell_size.1),
                     color,
@@ -72,9 +63,7 @@ impl VState {
                 .unwrap();
             }
         });
-        let mb = mesh_builder.lock().unwrap();
-
-        mb.to_owned()
+        mesh_builder.to_owned()
     }
 
     pub fn parse(&mut self, lines: Vec<String>) {
@@ -170,11 +159,9 @@ impl EventHandler for VState {
         let stdin = io::stdin();
         let mut rem_line = i32::MAX;
 
-        let mut n =0;
 
         'read_buffer: for line in stdin.lock().lines() {
             if let Ok(l) = line {
-                n+=1;
                 if l.starts_with("Piece") {
                     let part = l
                         .trim_matches(|c: char| !c.is_numeric())
@@ -193,22 +180,15 @@ impl EventHandler for VState {
             }
         }
 
-        if n < input_lines.len() - 1 {
-            for i in n..input_lines.len() {
-                println!("{}", input_lines[i]);
-            }
-            panic!()
-        }
 
         self.parse(input_lines.clone());
         if self.started {
             let c = self.anfield.width as usize | 2;
             let r = self.anfield.height as usize | 2;
 
-            let w = (800 / c) as f32;
-            let h = (600 / r) as f32;
+            let size = _ctx.gfx.size();
 
-            self.grid.init((w, h), r, c);
+            self.grid.init( r, c,size);
         }
         input_lines.clear();
         self.started = true;

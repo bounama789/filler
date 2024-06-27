@@ -1,6 +1,3 @@
 [workspace]
 members = ["filler", "visualizer"]
-[profile.bench.build-override]
 
-[workspace.dependencies]
-rayon = "1.10.0"

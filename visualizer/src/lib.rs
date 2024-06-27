@@ -1,7 +1,8 @@
-use ggez::graphics::{self, Color, MeshBuilder, Rect};
+use ggez::graphics::{Color, DrawMode, MeshBuilder, Rect};
 
 pub struct Grid {
-    pub cell_size: (f32,f32),
+    pub rect: Rect,
+    pub cell_size: (f32, f32),
     pub rows: usize,
     pub cols: usize,
 }
@@ -9,51 +10,50 @@ pub struct Grid {
 impl Grid {
     pub fn new() -> Self {
         Grid {
-            cell_size: (0.0,0.0),
+            rect: Rect::default(),
+            cell_size: (0.0, 0.0),
             rows: 0,
             cols: 0,
         }
     }
 
-    pub fn init(&mut self, c_size: (f32,f32), r: usize, c: usize) {
+    pub fn init(&mut self, r: usize, c: usize, size: (f32, f32)) {
+        self.rect = Rect::new(size.0 / 6.0, 20.0, 800.0, 600.0);
+        let c_size = ((self.rect.w / (c) as f32).round(), (self.rect.h / (r) as f32).round());
         self.cell_size = c_size;
         self.cols = c;
         self.rows = r;
     }
 
     pub fn build(&self) -> Option<MeshBuilder> {
-        let size = (800.0, 600.0);
-
-        let (width, height) = size;
-
+        // let size = (800.0, 600.0);
         let mut mesh_builder = MeshBuilder::new();
+        let _ = mesh_builder.rectangle(DrawMode::fill(), self.rect, Color::from_rgb(41, 45, 60));
+        let w = (self.cols-2) as f32 * self.cell_size.0;
+        let h = self.rows as f32 * self.cell_size.1;
 
-        for row in 0..=self.rows {
-            let y = row as f32 * self.cell_size.1;
-            let start_point = [0.0, y];
-            let end_point = [width, y];
-            mesh_builder.line(&[start_point, end_point], 1.0, Color::from_rgba(128, 128, 128, 126));
+        for row in 0..self.rows {
+            let y = self.rect.y + row as f32 * self.cell_size.1;
+            let start_point = [self.rect.x, y];
+            let end_point = [self.rect.x + w, y];
+            let _ = mesh_builder.line(
+                &[start_point, end_point],
+                1.0,
+                Color::from_rgba(128, 128, 128, 126),
+            );
         }
 
-        for col in 0..=self.cols {
-            let x = col as f32 * self.cell_size.0;
-            let start_point = [x, 0.0];
-            let end_point = [x, height];
-            mesh_builder.line(&[start_point, end_point], 1.0, Color::from_rgba(128, 128, 128, 126));
+        for col in 0..(self.cols-1) {
+            let x = self.rect.x + col as f32 * self.cell_size.0;
+            let start_point = [x, self.rect.y];
+            let end_point = [x, self.rect.y + h];
+            let _ = mesh_builder.line(
+                &[start_point, end_point],
+                1.0,
+                Color::from_rgba(128, 128, 128, 126),
+            );
         }
 
         Some(mesh_builder)
-    }
-
-    fn dimensions(
-        &self,
-        gfx: &impl ggez::context::Has<graphics::GraphicsContext>,
-    ) -> Option<graphics::Rect> {
-        Some(Rect::new(
-            0.0,
-            0.0,
-            self.cell_size.0 * self.cols as f32,
-            self.cell_size.1 * self.rows as f32,
-        ))
     }
 }

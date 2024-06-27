@@ -1,10 +1,8 @@
 use std::{
     cmp::{max, min},
     env,
-    sync::Mutex,
 };
 
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::{
     anfield::{Anfield, Cell},
@@ -231,16 +229,16 @@ impl Position {
     pub fn surround_score(&self, anfield: &Anfield, robot: &Robot) -> i32 {
         // let mut logger = Logger::new("log.txt").unwrap();
         // logger.write("calculating surround score");
-        let mut min_distance = Mutex::new(f32::MAX);
-        let mut score = Mutex::new(0);
+        let mut min_distance = f32::MAX;
+        let mut score = 0;
 
         anfield
             .opp_occupation
             .clone()
-            .into_par_iter()
+            .into_iter()
             .for_each(|Cell { x, y, .. }| {
-                let mut m = min_distance.lock().unwrap();
-                let mut s = score.lock().unwrap();
+                // let mut m = min_distance.lock().unwrap();
+                // let mut s = score.lock().unwrap();
 
                 if let Some(id) = anfield.occupation.get(&(x, y)) {
                     if *id != 0 && *id != robot.id {
@@ -248,8 +246,8 @@ impl Position {
                             + ((self.y as i32 - y as i32) as f32).powf(2.0))
                         .abs()
                         .sqrt();
-                        if distance < *m {
-                            *m = distance.into();
+                        if distance < min_distance {
+                            min_distance = distance.into();
                         }
                     }
                     for di in -1..=1 {
@@ -265,7 +263,7 @@ impl Position {
                                 let nj = nj as i32;
                                 if let Some(id) = anfield.occupation.get(&(nj, ni)) {
                                     if *id == 0 {
-                                        *s += 1;
+                                        score += 1;
                                     }
                                 }
                             }
@@ -273,11 +271,9 @@ impl Position {
                     }
                 }
             });
-        let m = min_distance.get_mut().unwrap();
-        let s = score.get_mut().unwrap();
 
-        console_log(format!("surround: {}", (*m - *s as f32).abs()));
-        (*m - (*s) as f32).abs() as i32
+        console_log(format!("surround: {}", (min_distance - score as f32).abs()));
+        (min_distance - (score) as f32).abs() as i32
         // score
     }
 

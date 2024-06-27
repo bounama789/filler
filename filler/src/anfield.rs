@@ -1,6 +1,5 @@
-use std::{collections::HashMap, sync::Mutex};
+use std::collections::HashMap;
 
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::{
     process::{Piece, Robot},
@@ -68,10 +67,9 @@ impl Anfield {
     }
 
     pub fn potential_positions(&self, piece: &Piece, robot: &Robot) -> HashMap<Position, f32> {
-        let positions = Mutex::new(HashMap::new());
-        (0..self.height).into_par_iter().for_each(|i| {
-            (0..self.width).into_par_iter().for_each(|j| {
-                let mut pos = positions.lock().unwrap();
+        let mut positions = HashMap::new();
+        (0..self.height).into_iter().for_each(|i| {
+            (0..self.width).into_iter().for_each(|j| {
                 if self.can_place((j, i), robot, piece) {
                     let p = Position {
                         x: j,
@@ -79,13 +77,11 @@ impl Anfield {
                         robot_idx: robot.id,
                         piece: piece.clone(),
                     };
-                    pos.insert(p.clone(), p.score(self, robot));
+                    positions.insert(p.clone(), p.score(self, robot));
                 }
             })
         });
-        let pos = positions.lock().unwrap();
-
-        pos.clone()
+        positions
     }
 }
 
