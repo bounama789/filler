@@ -1,14 +1,14 @@
 build: prepare install_deps compile
 
 prepare:
-	rustup update
 	mkdir -p bin
 	rm -f bin/*
 
 install_deps:
 ifeq ($(d), 1)
+	rustup default stable
 	apt update
-	apt install -y build-essential 
+	apt install -y build-essential libasound2-dev libudev-dev
 endif
 
 compile:
