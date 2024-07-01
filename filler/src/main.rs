@@ -6,12 +6,10 @@ use std::{
 use filler::{flag, State};
 
 fn main() {
-    // let mut logger = Logger::new("log.txt").unwrap();
     let mut input_lines = Vec::new();
     let stdin = io::stdin();
     let mut state = State::new();
     let mut rem_line = i32::MAX;
-
 
     let args: Vec<String> = env::args().collect();
     if let Some(flag) = args.get(1) {
@@ -22,7 +20,6 @@ fn main() {
     }
 
     loop {
-        // logger.write(&format!("\n###############################################\n\nround: {}\n",round));
         'read_buffer: for line in stdin.lock().lines() {
             if let Ok(l) = line {
                 if l.starts_with("Piece") {
@@ -30,7 +27,7 @@ fn main() {
                         .trim_matches(|c: char| !c.is_numeric())
                         .split_once(' ')
                         .expect("error while spliting");
-                    // let width: i32 = part.0.parse().expect("error while parsing");
+
                     let height: i32 = part.1.parse().expect("error while parsing");
                     rem_line = height;
                     input_lines.push(l);
@@ -60,7 +57,6 @@ fn main() {
 
         if let Some(p) = positions.last() {
             println!("{} {}", p.0.x, p.0.y);
-            // state.robot.update_area(&p.0, &state.anfield)
         } else {
             println!("0 0");
         }

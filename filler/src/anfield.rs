@@ -1,12 +1,11 @@
 use std::collections::HashMap;
 
-
 use crate::{
     process::{Piece, Robot},
     Position,
 };
 
-#[derive(Debug,Clone, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Anfield {
     pub width: i32,
     pub height: i32,

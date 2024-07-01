@@ -19,17 +19,19 @@ impl Grid {
 
     pub fn init(&mut self, r: usize, c: usize, size: (f32, f32)) {
         self.rect = Rect::new(size.0 / 6.0, 20.0, 800.0, 600.0);
-        let c_size = ((self.rect.w / (c) as f32).round(), (self.rect.h / (r) as f32).round());
+        let c_size = (
+            (self.rect.w / (c) as f32).round(),
+            (self.rect.h / (r) as f32).round(),
+        );
         self.cell_size = c_size;
         self.cols = c;
         self.rows = r;
     }
 
     pub fn build(&self) -> Option<MeshBuilder> {
-        // let size = (800.0, 600.0);
         let mut mesh_builder = MeshBuilder::new();
-        let _ = mesh_builder.rectangle(DrawMode::fill(), self.rect, Color::from_rgb(41, 45, 60));
-        let w = (self.cols-2) as f32 * self.cell_size.0;
+        let _ = mesh_builder.rectangle(DrawMode::fill(), self.rect, Color::from_rgb(45, 49, 66));
+        let w = (self.cols - 2) as f32 * self.cell_size.0;
         let h = self.rows as f32 * self.cell_size.1;
 
         for row in 0..self.rows {
@@ -43,7 +45,7 @@ impl Grid {
             );
         }
 
-        for col in 0..(self.cols-1) {
+        for col in 0..(self.cols - 1) {
             let x = self.rect.x + col as f32 * self.cell_size.0;
             let start_point = [x, self.rect.y];
             let end_point = [x, self.rect.y + h];

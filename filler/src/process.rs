@@ -3,7 +3,6 @@ use std::{
     env,
 };
 
-
 use crate::{
     anfield::{Anfield, Cell},
     logger::console_log,
@@ -15,6 +14,7 @@ pub struct Robot {
     pub characters: [char; 2],
     pub area: ((i32, i32), (i32, i32)),
     pub starting_point: (i32, i32),
+    pub score: u32,
 }
 
 impl Robot {
@@ -24,6 +24,7 @@ impl Robot {
             characters: ch,
             area: ((0, 0), (0, 0)),
             starting_point: (0, 0),
+            score: 0,
         }
     }
 
@@ -31,10 +32,17 @@ impl Robot {
         self.starting_point = (x, y);
         self.area = ((x, y), (x, y))
     }
+
+    pub fn update_score(&mut self, anfield: &Anfield) {
+        self.score = anfield
+            .occupation
+            .iter()
+            .filter(|&(_, &id)| self.id == id)
+            .count() as u32
+    }
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
-
 pub struct Piece {
     pub width: i32,
     pub height: i32,
@@ -85,8 +93,6 @@ impl State {
     }
 
     pub fn parse(&mut self, lines: Vec<String>) {
-        // let mut logger = Logger::new("log.txt").unwrap();
-        // logger.write("parsing...\n");
         let mut anfield: Anfield = Anfield::new(0, 0);
         let mut robot = if self.started {
             Some(self.robot.clone())
@@ -128,8 +134,6 @@ impl State {
                 continue;
             }
             if parsing_anfield {
-                // logger.write("parsing anfield...\n");
-
                 let l =
                     line.trim_matches(|c: char| !c.is_ascii_punctuation() && c != 'a' && c != 's');
                 l.char_indices().for_each(|(i, c)| {
@@ -170,8 +174,6 @@ impl State {
             }
 
             if parsing_pieces {
-                // logger.write("parsing current piece...\n");
-
                 let l = line.trim();
                 let cells: Vec<char> = l.chars().collect();
                 pieces_cells.push(cells)
@@ -181,8 +183,6 @@ impl State {
         if anfield.width != 0 {
             self.anfield = anfield;
         }
-
-        // logger.write(&format!("current piece\n{:#?}",pieces_cells));
 
         self.current_piece = Piece::new(pieces_cells);
         let ((x, y), (x1, y1)) = self.robot.area;
@@ -194,7 +194,6 @@ impl State {
             ),
         );
         self.started = true;
-        // logger.write("end parsing");
     }
 }
 
@@ -220,15 +219,9 @@ impl Position {
         let row_dist = min(y, anfield.height - y - 1);
         let col_dist = min(x, anfield.width - x - 1);
         (row_dist + col_dist) / 2
-        // console_log(format!(
-        //     "edge proximity: {}",
-        //     20 * score / max(anfield.height, anfield.width)
-        // ));
     }
 
     pub fn surround_score(&self, anfield: &Anfield, robot: &Robot) -> i32 {
-        // let mut logger = Logger::new("log.txt").unwrap();
-        // logger.write("calculating surround score");
         let mut min_distance = f32::MAX;
         let mut score = 0;
 
@@ -237,9 +230,6 @@ impl Position {
             .clone()
             .into_iter()
             .for_each(|Cell { x, y, .. }| {
-                // let mut m = min_distance.lock().unwrap();
-                // let mut s = score.lock().unwrap();
-
                 if let Some(id) = anfield.occupation.get(&(x, y)) {
                     if *id != 0 && *id != robot.id {
                         let distance = (((self.x as i32 - x as i32) as f32).powf(2.0)
@@ -274,15 +264,11 @@ impl Position {
 
         console_log(format!("surround: {}", (min_distance - score as f32).abs()));
         (min_distance - (score) as f32).abs() as i32
-        // score
     }
 
     pub fn score(&self, anfield: &Anfield, robot: &Robot) -> f32 {
-        // let mut logger = Logger::new("log.txt").unwrap();
-
         let mut blocking_score = 0;
         let mut edge_proximity = 0;
-        // logger.write(&format!("calculating score\n"));
 
         for i in 0..self.piece.height {
             for j in 0..self.piece.width {
@@ -292,7 +278,7 @@ impl Position {
                 }
             }
         }
-        let blocking_score = (blocking_score * 10) as f32; // *10 because it's more important
+        let blocking_score = (blocking_score * 10) as f32;
         let edge_proximity = 20 * edge_proximity / max(anfield.height, anfield.width);
 
         let mut score = blocking_score + edge_proximity as f32;
